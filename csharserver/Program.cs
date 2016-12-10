@@ -281,7 +281,7 @@ namespace csharserver
 
                 // Complete sending the data to the remote device.
                 int bytesSent = handler.EndSend(ar);
-                Console.WriteLine("Sent {0} bytes to client.", bytesSent);
+                //Console.WriteLine("Sent {0} bytes to client.", bytesSent);
 
                 //handler.Shutdown(SocketShutdown.Both);
                 //handler.Close();
@@ -307,9 +307,9 @@ namespace csharserver
 
             Byte[] receiveBytes = u.EndReceive(ar, ref e);
             string receiveString = Encoding.ASCII.GetString(receiveBytes);
-            Console.WriteLine("Received: {0}", receiveString);
             char[] delimiters = { ':' };
             String[] parts = receiveString.Split(delimiters);
+            //Console.WriteLine("Received: {0}", parts[0]);
             // The message then needs to be handled
             messageReceived = true;
             string sendString = "update:";
@@ -330,7 +330,7 @@ namespace csharserver
                     sendString = sendString + entry.Value.name + ":" + entry.Value.right + ":" + entry.Value.left + ":" + entry.Value.jump + ":" + entry.Value.dash + ":" + entry.Value.x + ":" + entry.Value.y + ":";
                 }
             }
-            SendMessageUDP(e, sendString, u);
+            SendMessageUDP(e, sendString);
             //ReceiveMessagesUDP();
             u.BeginReceive(new AsyncCallback(recieveCallbackUDP), (UdpState)(ar.AsyncState));
             
@@ -361,15 +361,16 @@ namespace csharserver
             messageSent = true;
         }
 
-        static void SendMessageUDP(IPEndPoint server, string message, UdpClient u)
+        static void SendMessageUDP(IPEndPoint server, string message)
         {
             // create the udp socket
-            //UdpClient u = new UdpClient();
+            UdpClient u = new UdpClient();
             u.Connect(server.Address, server.Port);
             Byte[] sendBytes = Encoding.ASCII.GetBytes(message);
-            Console.WriteLine("SENT: {0}", message);
+            //Console.WriteLine("SENT: {0}", message);
             // send the message
             // the destination is defined by the call to .Connect()
+            messageSent = false;
             u.BeginSend(sendBytes, sendBytes.Length, new AsyncCallback(SendCallbackUDP), u);
             while (!messageSent)
             {
