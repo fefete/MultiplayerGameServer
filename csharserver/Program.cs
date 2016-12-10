@@ -22,6 +22,7 @@ namespace csharserver
         public bool left;
         public bool right;
         public bool dash;
+        public bool can_jump;
         public float x;
         public float y;
 
@@ -322,12 +323,13 @@ namespace csharserver
                     p.left = Convert.ToBoolean(parts[2]);
                     p.jump = Convert.ToBoolean(parts[3]);
                     p.dash = Convert.ToBoolean(parts[4]);
-                    p.x = float.Parse(parts[5], CultureInfo.InvariantCulture);
-                    p.y = float.Parse(parts[6], CultureInfo.InvariantCulture);
+                    p.can_jump = Convert.ToBoolean(parts[5]);
+                    p.x = float.Parse(parts[6], CultureInfo.InvariantCulture);
+                    p.y = float.Parse(parts[7], CultureInfo.InvariantCulture);
                     clients[entry.Key] = p;
                 }
                 else{
-                    sendString = sendString + entry.Value.name + ":" + entry.Value.right + ":" + entry.Value.left + ":" + entry.Value.jump + ":" + entry.Value.dash + ":" + entry.Value.x + ":" + entry.Value.y + ":";
+                    sendString = sendString + entry.Value.name + ":" + entry.Value.right + ":" + entry.Value.left + ":" + entry.Value.jump + ":" + entry.Value.dash + ":" + entry.Value.can_jump + ":" + entry.Value.x + ":" + entry.Value.y + ":";
                 }
             }
             SendMessageUDP(e, sendString);
