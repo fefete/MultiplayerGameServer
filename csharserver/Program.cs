@@ -13,18 +13,19 @@ using System.Globalization;
 
 namespace csharserver
 {
-
+    [StructLayout(LayoutKind.Explicit)]
     public struct player
-    {
-        public string ID;   
-        public string name;
-        public bool jump;
-        public bool left;
-        public bool right;
-        public bool dash;
-        public bool can_jump;
-        public float x;
-        public float y;
+    { 
+        [FieldOffset (0)]
+        public int name;
+        [FieldOffset(8)]
+        public double x;
+        [FieldOffset (16)]
+        public double y;
+        [FieldOffset (24)]
+        public double v_x;
+        [FieldOffset (32)]
+        public double v_y; 
 
     }
 
@@ -216,8 +217,16 @@ namespace csharserver
                         if (exists > 0)
                         {
                             player p = new player();
-                            p.name = parts[1];
-                            SendTCP(handler, "login:OK:"+parts[1]+":");
+                            dbConnection.Open();
+                            sql = "SELECT * FROM players WHERE NAME LIKE "+ parts[1] + " AND PASSWORD LIKE " + parts[2];
+                            SQLiteCommand com = new SQLiteCommand(sql, dbConnection);
+                            SQLiteDataReader reader = com.ExecuteReader();
+                            reader.Read();
+                            Console.WriteLine("Name: " + reader["ID"] + "\tScore: " + reader["NAME"]);
+                            String id = Convert.ToString(reader["ID"]);
+                            dbConnection.Close();
+                            SendTCP(handler, "login:OK:"+ id +":");
+                            p.name =Convert.ToInt32(id);
                             foreach(KeyValuePair<Socket, player> entry in clients)
                             {
                                 SendTCP(entry.Key, "game:newPlayer:"+p.name+":" + 400/30 + ":" + 300/30 + ":");
@@ -307,32 +316,33 @@ namespace csharserver
             IPEndPoint e = (IPEndPoint)((UdpState)(ar.AsyncState)).e;
 
             Byte[] receiveBytes = u.EndReceive(ar, ref e);
-            string receiveString = Encoding.ASCII.GetString(receiveBytes);
-            char[] delimiters = { ':' };
-            String[] parts = receiveString.Split(delimiters);
+            int name = BitConverter.ToInt32(receiveBytes, 0);
+            double x = BitConverter.ToDouble(receiveBytes, 8);
+            double y = BitConverter.ToDouble(receiveBytes, 16);
+            double v_x = BitConverter.ToDouble(receiveBytes, 24);
+            double v_y = BitConverter.ToDouble(receiveBytes, 32);
+
+            Console.WriteLine("xy = {0} {1} {2} {3} {4}" ,name, x, y, v_x, v_y);
             //Console.WriteLine("Received: {0}", parts[0]);
             // The message then needs to be handled
             messageReceived = true;
-            string sendString = "update:";
             foreach (KeyValuePair<Socket, player> entry in clients)
             {
-                if(entry.Value.name == parts[0])
+                if(entry.Value.name == name)
                 {
                     player p = entry.Value;
-                    p.right = Convert.ToBoolean(parts[1]);
-                    p.left = Convert.ToBoolean(parts[2]);
-                    p.jump = Convert.ToBoolean(parts[3]);
-                    p.dash = Convert.ToBoolean(parts[4]);
-                    p.can_jump = Convert.ToBoolean(parts[5]);
-                    p.x = float.Parse(parts[6], CultureInfo.InvariantCulture);
-                    p.y = float.Parse(parts[7], CultureInfo.InvariantCulture);
+                    p.x = x;
+                    p.y = y;
+                    p.v_x = v_x;
+                    p.v_y = v_y;
+
                     clients[entry.Key] = p;
                 }
                 else{
-                    sendString = sendString + entry.Value.name + ":" + entry.Value.right + ":" + entry.Value.left + ":" + entry.Value.jump + ":" + entry.Value.dash + ":" + entry.Value.can_jump + ":" + entry.Value.x + ":" + entry.Value.y + ":";
+                    SendMessageUDP(e, entry.Value);
                 }
             }
-            SendMessageUDP(e, sendString);
+            //SendMessageUDP(e, sendString);
             //ReceiveMessagesUDP();
             u.BeginReceive(new AsyncCallback(recieveCallbackUDP), (UdpState)(ar.AsyncState));
             
@@ -363,12 +373,25 @@ namespace csharserver
             messageSent = true;
         }
 
-        static void SendMessageUDP(IPEndPoint server, string message)
+        static byte[] getBytes(player str)
+        {
+            int size = Marshal.SizeOf(str);
+            byte[] arr = new byte[size];
+
+            IntPtr ptr = Marshal.AllocHGlobal(size);
+            Marshal.StructureToPtr(str, ptr, true);
+            Marshal.Copy(ptr, arr, 0, size);
+            int len = arr.Length;
+            Marshal.FreeHGlobal(ptr);
+            return arr;
+        }
+
+        static void SendMessageUDP(IPEndPoint server, player message)
         {
             // create the udp socket
             UdpClient u = new UdpClient();
             u.Connect(server.Address, server.Port);
-            Byte[] sendBytes = Encoding.ASCII.GetBytes(message);
+            byte[] sendBytes = getBytes(message);
             //Console.WriteLine("SENT: {0}", message);
             // send the message
             // the destination is defined by the call to .Connect()
