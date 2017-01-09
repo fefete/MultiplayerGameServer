@@ -25,7 +25,11 @@ namespace csharserver
         [FieldOffset (24)]
         public double v_x;
         [FieldOffset (32)]
-        public double v_y; 
+        public double v_y;
+        [FieldOffset(40)]
+        public double dash_cd;
+        [FieldOffset(48)]
+        public bool has_ball;
 
     }
 
@@ -87,7 +91,6 @@ namespace csharserver
             // running the listener is localhost.
             IPHostEntry ip_host_info = Dns.Resolve("localhost");
             IPAddress ip_address = ip_host_info.AddressList[0];
-            IPAddress multicast = IPAddress.Parse("224.0.1.1");
             IPEndPoint localEndPoint = new IPEndPoint(ip_address, 53000);
             IPEndPoint UDP_localEndPoint = new IPEndPoint(ip_address, 53035);
             //IPEndPoint UDP_localEndPoint_multicast = new IPEndPoint(multicast, 53035);
@@ -321,8 +324,10 @@ namespace csharserver
             double y = BitConverter.ToDouble(receiveBytes, 16);
             double v_x = BitConverter.ToDouble(receiveBytes, 24);
             double v_y = BitConverter.ToDouble(receiveBytes, 32);
+            double dash_cd = BitConverter.ToDouble(receiveBytes, 40);
+            bool has_ball = BitConverter.ToBoolean(receiveBytes, 48);
 
-            Console.WriteLine("xy = {0} {1} {2} {3} {4}" ,name, x, y, v_x, v_y);
+            //Console.WriteLine("xy = {0} {1} {2} {3} {4}" ,name, x, y, v_x, v_y);
             //Console.WriteLine("Received: {0}", parts[0]);
             // The message then needs to be handled
             messageReceived = true;
@@ -335,6 +340,8 @@ namespace csharserver
                     p.y = y;
                     p.v_x = v_x;
                     p.v_y = v_y;
+                    p.dash_cd = dash_cd;
+                    p.has_ball = has_ball;
 
                     clients[entry.Key] = p;
                 }
