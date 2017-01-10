@@ -265,6 +265,20 @@ namespace csharserver
                             SendTCP(handler, "remove:OK:");
                         }
                     }
+                    if(parts[0] == "disconnect")
+                    {
+                        foreach (KeyValuePair<Socket, player> entry in clients)
+                        {
+                            if(entry.Value.name == Convert.ToInt16(parts[1]))
+                            {
+                                player r;
+                                if (clients.TryRemove(entry.Key, out r)){
+                                    Console.WriteLine("REMOVE SUCCESSFULLY");
+                                    entry.Key.Disconnect(true);
+                                }
+                            }
+                        }
+                    }
                 }
                 else
                 {
