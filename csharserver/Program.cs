@@ -89,11 +89,33 @@ namespace csharserver
             // Establish the local endpoint for the socket.
             // The DNS name of the computer
             // running the listener is localhost.
-            IPHostEntry ip_host_info = Dns.Resolve("localhost");
-            IPAddress ip_address = ip_host_info.AddressList[0];
+            IPAddress[] localIPs = Dns.GetHostAddresses(Dns.GetHostName());
+            IPAddress ip_address;
+            ip_address = localIPs[0];
+            for (int i = 0; i < localIPs.Length; i++)
+            {
+                switch (localIPs[i].AddressFamily)
+                {
+                    case System.Net.Sockets.AddressFamily.InterNetwork:
+                        // we have IPv4
+                        if (!IPAddress.IsLoopback(localIPs[i]))
+                        {
+                            ip_address = localIPs[i];
+                            Console.WriteLine("FOUND AND SUITABLE IP");
+                            i = 100;
+                        }
+                        break;
+                    case System.Net.Sockets.AddressFamily.InterNetworkV6:
+                        // we have IPv6
+                        break;
+                    default:
+                        // umm... yeah... mmmm.... nope
+                        break;
+                }
+            }
             IPEndPoint localEndPoint = new IPEndPoint(ip_address, 53000);
             IPEndPoint UDP_localEndPoint = new IPEndPoint(ip_address, 53035);
-            //IPEndPoint UDP_localEndPoint_multicast = new IPEndPoint(multicast, 53035);
+            Console.WriteLine("Listening at  {0}", ip_address.ToString());
             // Create a TCP/IP socket.
             Socket listener = new Socket(AddressFamily.InterNetwork,
                 SocketType.Stream, ProtocolType.Tcp);
@@ -233,7 +255,13 @@ namespace csharserver
                             foreach(KeyValuePair<Socket, player> entry in clients)
                             {
                                 SendTCP(entry.Key, "game:newPlayer:"+p.name+":" + 400/30 + ":" + 300/30 + ":");
-                                SendTCP(handler, "game:newPlayer:" + entry.Value.name + ":" + entry.Value.x + ":" + entry.Value.y +":");
+                                Console.WriteLine("Sent player to old client");
+                            }
+                            foreach (KeyValuePair<Socket, player> entry in clients)
+                            {
+                                SendTCP(handler, "game:newPlayer:" + entry.Value.name + ":" + entry.Value.x + ":" + entry.Value.y + ":");
+                                Console.WriteLine("Sent player to new client");
+
                             }
                             clients[handler] = p;
 
