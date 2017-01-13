@@ -1,7 +1,0 @@
-.vs/
-csharserver/obj/
-csharserver/bin/Debug/ClientsDB.sqlite
-*.csproj
-csharserver/bin/Debug/MyDatabase.sqlite
-csharserver/bin/
-csharserver.VC.db

@@ -1,0 +1,14 @@
+c:\users\metra\documents\visual studio 2015\Projects\csharserver\csharserver\bin\Debug\csharserver.exe.config
+C:\Users\metra\documents\visual studio 2015\Projects\csharserver\csharserver\obj\Debug\csharserver.exe
+C:\Users\metra\documents\visual studio 2015\Projects\csharserver\csharserver\obj\Debug\csharserver.pdb
+C:\Users\metra\documents\visual studio 2015\Projects\csharserver\csharserver\bin\Debug\csharserver.exe
+C:\Users\metra\documents\visual studio 2015\Projects\csharserver\csharserver\bin\Debug\csharserver.pdb
+C:\Users\metra\documents\visual studio 2015\Projects\csharserver\csharserver\obj\Debug\csharserver.csprojResolveAssemblyReference.cache
+C:\Users\metra\Documents\Visual Studio 2015\Projects\csharserver\csharserver\bin\Debug\System.Data.SQLite.dll
+C:\Users\metra\Documents\CsharpServer\csharserver\bin\Debug\csharserver.exe.config
+C:\Users\metra\Documents\CsharpServer\csharserver\obj\Debug\csharserver.exe
+C:\Users\metra\Documents\CsharpServer\csharserver\obj\Debug\csharserver.pdb
+C:\Users\metra\Documents\CsharpServer\csharserver\bin\Debug\csharserver.exe
+C:\Users\metra\Documents\CsharpServer\csharserver\bin\Debug\csharserver.pdb
+C:\Users\metra\Documents\CsharpServer\csharserver\bin\Debug\System.Data.SQLite.dll
+C:\Users\metra\Documents\CsharpServer\csharserver\obj\Debug\csharserver.csprojResolveAssemblyReference.cache
