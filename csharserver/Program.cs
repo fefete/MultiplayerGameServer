@@ -15,22 +15,23 @@ namespace csharserver
 {
     [StructLayout(LayoutKind.Explicit)]
     public struct player
-    { 
-        [FieldOffset (0)]
+    {
+        [FieldOffset(0)]
         public int name;
         [FieldOffset(8)]
         public double x;
-        [FieldOffset (16)]
+        [FieldOffset(16)]
         public double y;
-        [FieldOffset (24)]
+        [FieldOffset(24)]
         public double v_x;
-        [FieldOffset (32)]
+        [FieldOffset(32)]
         public double v_y;
         [FieldOffset(40)]
         public double dash_cd;
         [FieldOffset(48)]
         public bool has_ball;
-
+        [FieldOffset(56)]
+        public double high_score;
     }
 
     public class UdpState
@@ -73,12 +74,18 @@ namespace csharserver
             int numProcs = Environment.ProcessorCount;
             int concurrencyLevel = numProcs * 2;
             clients = new ConcurrentDictionary<Socket, player>(concurrencyLevel, numProcs);
-            dbConnection = new SQLiteConnection("Data Source=MyDatabase.sqlite;Version=3;");
-            dbConnection.Open();
+            //dbConnection.Open();
             string sql = "CREATE TABLE IF NOT EXISTS players (ID INTEGER PRIMARY KEY AUTOINCREMENT, NAME varchar(20), PASSWORD varchar(20), HIGHSCORE INT)";
-            SQLiteCommand com = new SQLiteCommand(sql, dbConnection);
-            com.ExecuteNonQuery();
-            dbConnection.Close();
+            using (dbConnection = new SQLiteConnection("Data Source=MyDatabase.sqlite;Version=3;"))
+            {
+                dbConnection.Open();
+                using (SQLiteCommand com = new SQLiteCommand(sql, dbConnection))
+                {
+                    com.ExecuteNonQuery();
+                }
+            }
+
+            //dbConnection.Close();
         }
 
         public static void startListening()
@@ -119,7 +126,7 @@ namespace csharserver
             // Create a TCP/IP socket.
             Socket listener = new Socket(AddressFamily.InterNetwork,
                 SocketType.Stream, ProtocolType.Tcp);
-    
+
 
             UdpClient c = new UdpClient(listenPort);
             c.EnableBroadcast = true;
@@ -127,7 +134,7 @@ namespace csharserver
 
             state.e = UDP_localEndPoint;
             state.u = c;
-            
+
             c.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
             //c.JoinMulticastGroup(multicast);
             // Bind the socket to the local endpoint and listen for incoming connections.
@@ -160,7 +167,8 @@ namespace csharserver
 
         public static void startListeningUDP()
         {
-            while (true) {
+            while (true)
+            {
                 ReceiveMessagesUDP();
             }
         }
@@ -189,7 +197,6 @@ namespace csharserver
             // from the asynchronous state object.
             stateObject state = (stateObject)ar.AsyncState;
             Socket handler = state.work_socket;
-
             // Read data from the client socket. 
             int bytesRead = handler.EndReceive(ar);
             if (bytesRead > 0)
@@ -206,11 +213,18 @@ namespace csharserver
                     if (parts[0] == "reg")
                     {
                         String sql = "SELECT COUNT(*) FROM players WHERE NAME LIKE @name";
-                        dbConnection.Open();
-                        SQLiteCommand com = new SQLiteCommand(sql, dbConnection);
-                        com.Parameters.AddWithValue("@name", parts[1]);
-                        int err = Convert.ToInt32(com.ExecuteScalar());
-                        dbConnection.Close();
+                        //dbConnection.Open();
+                        int err = 0;
+                        using (dbConnection = new SQLiteConnection("Data Source=MyDatabase.sqlite;Version=3;"))
+                        {
+                            dbConnection.Open();
+                            using (SQLiteCommand com = new SQLiteCommand(sql, dbConnection))
+                            {
+                                com.Parameters.AddWithValue("@name", parts[1]);
+                                err = Convert.ToInt32(com.ExecuteScalar());
+                            }
+                        }
+                        //dbConnection.Close();
 
                         if (err > 0)
                         {
@@ -221,40 +235,67 @@ namespace csharserver
                         else
                         {
                             String sql_add = "INSERT INTO players (NAME, PASSWORD, HIGHSCORE) VALUES (@username, @password, 0)";
-                            dbConnection.Open();
-                            SQLiteCommand command = new SQLiteCommand(sql_add, dbConnection);
-                            command.Parameters.AddWithValue("@username", parts[1]);
-                            command.Parameters.AddWithValue("@password", parts[2]);
-                            command.ExecuteNonQuery();
-                            dbConnection.Close();
+                            //dbConnection.Open();
+                            using (dbConnection = new SQLiteConnection("Data Source=MyDatabase.sqlite;Version=3;"))
+                            {
+                                dbConnection.Open();
+                                using (SQLiteCommand command = new SQLiteCommand(sql_add, dbConnection))
+                                {
+                                    command.Parameters.AddWithValue("@username", parts[1]);
+                                    command.Parameters.AddWithValue("@password", parts[2]);
+                                    command.ExecuteNonQuery();
+                                }
+                            }
+                            //dbConnection.Close();
                             SendTCP(handler, "reg:OK:");
                         }
                     }
                     if (parts[0] == "login")
                     {
                         String sql = "SELECT COUNT(*) FROM players WHERE NAME LIKE @username AND PASSWORD LIKE @password";
-                        dbConnection.Open();
-                        SQLiteCommand command = new SQLiteCommand(sql, dbConnection);
-                        command.Parameters.AddWithValue("@username", parts[1]);
-                        command.Parameters.AddWithValue("@password", parts[2]);
-                        int exists = Convert.ToInt32(command.ExecuteScalar());
-                        dbConnection.Close();
+                        //dbConnection.Open();
+                        int exists = 0;
+                        using (dbConnection = new SQLiteConnection("Data Source=MyDatabase.sqlite;Version=3;"))
+                        {
+                            dbConnection.Open();
+                            using (SQLiteCommand command = new SQLiteCommand(sql, dbConnection))
+                            {
+                                command.Parameters.AddWithValue("@username", parts[1]);
+                                command.Parameters.AddWithValue("@password", parts[2]);
+                                exists = Convert.ToInt32(command.ExecuteScalar());
+                            }
+                        }
+                        //dbConnection.Close();
                         if (exists > 0)
                         {
                             player p = new player();
-                            dbConnection.Open();
-                            sql = "SELECT * FROM players WHERE NAME LIKE "+ parts[1] + " AND PASSWORD LIKE " + parts[2];
-                            SQLiteCommand com = new SQLiteCommand(sql, dbConnection);
-                            SQLiteDataReader reader = com.ExecuteReader();
-                            reader.Read();
-                            Console.WriteLine("Name: " + reader["ID"] + "\tScore: " + reader["NAME"]);
-                            String id = Convert.ToString(reader["ID"]);
-                            dbConnection.Close();
-                            SendTCP(handler, "login:OK:"+ id +":");
-                            p.name =Convert.ToInt32(id);
-                            foreach(KeyValuePair<Socket, player> entry in clients)
+                            String id;
+                            String maxScore;
+                            //dbConnection.Open();
+                            sql = "SELECT * FROM players WHERE NAME LIKE " + parts[1] + " AND PASSWORD LIKE " + parts[2];
+                            using (dbConnection = new SQLiteConnection("Data Source=MyDatabase.sqlite;Version=3;"))
                             {
-                                SendTCP(entry.Key, "game:newPlayer:"+p.name+":" + 400/30 + ":" + 300/30 + ":");
+                                dbConnection.Open();
+                                using (SQLiteCommand com = new SQLiteCommand(sql, dbConnection))
+                                {
+                                    using (SQLiteDataReader reader = com.ExecuteReader())
+                                    {
+                                        reader.Read();
+                                        Console.WriteLine("Name: " + reader["ID"] + "\tScore: " + reader["HIGHSCORE"]);
+                                        id = Convert.ToString(reader["ID"]);
+                                        maxScore = Convert.ToString(reader["HIGHSCORE"]);
+                                    }
+                                }
+                            }
+
+
+                            //dbConnection.Close();
+                            SendTCP(handler, "login:OK:" + id + ":" + maxScore +":");
+                            p.name = Convert.ToInt32(id);
+                            p.high_score = Convert.ToDouble(maxScore);
+                            foreach (KeyValuePair<Socket, player> entry in clients)
+                            {
+                                SendTCP(entry.Key, "game:newPlayer:" + p.name + ":" + 400 / 30 + ":" + 300 / 30 + ":");
                                 Console.WriteLine("Sent player to old client");
                             }
                             foreach (KeyValuePair<Socket, player> entry in clients)
@@ -293,14 +334,31 @@ namespace csharserver
                             SendTCP(handler, "remove:OK:");
                         }
                     }
-                    if(parts[0] == "disconnect")
+                    if (parts[0] == "disconnect")
                     {
                         foreach (KeyValuePair<Socket, player> entry in clients)
                         {
-                            if(entry.Value.name == Convert.ToInt16(parts[1]))
+                            if (entry.Value.name == Convert.ToInt16(parts[1]))
                             {
                                 player r;
-                                if (clients.TryRemove(entry.Key, out r)){
+                                if (clients.TryRemove(entry.Key, out r))
+                                {
+                                    SendTCP(entry.Key, "remove:OK:");
+                                    String sql = "UPDATE players SET HIGHSCORE = @score WHERE ID = @username";
+                                    using (dbConnection = new SQLiteConnection("Data Source=MyDatabase.sqlite;Version=3;"))
+                                    {
+                                        dbConnection.Open();
+                                        using (SQLiteCommand command = new SQLiteCommand(sql, dbConnection))
+                                        {
+                                            command.Parameters.AddWithValue("@username", parts[1]);
+                                            command.Parameters.AddWithValue("@score", parts[2]);
+                                            command.ExecuteNonQuery();
+                                            foreach (KeyValuePair<Socket, player> connection in clients)
+                                            {
+                                                SendTCP(connection.Key, "game:disconnection:" + r.name + ":");
+                                            }
+                                        }
+                                    }
                                     Console.WriteLine("REMOVE SUCCESSFULLY");
                                     entry.Key.Disconnect(true);
                                 }
@@ -375,7 +433,7 @@ namespace csharserver
             messageReceived = true;
             foreach (KeyValuePair<Socket, player> entry in clients)
             {
-                if(entry.Value.name == name)
+                if (entry.Value.name == name)
                 {
                     player p = entry.Value;
                     p.x = x;
@@ -387,14 +445,15 @@ namespace csharserver
 
                     clients[entry.Key] = p;
                 }
-                else{
+                else
+                {
                     SendMessageUDP(e, entry.Value);
                 }
             }
             //SendMessageUDP(e, sendString);
             //ReceiveMessagesUDP();
             u.BeginReceive(new AsyncCallback(recieveCallbackUDP), (UdpState)(ar.AsyncState));
-            
+
         }
 
         public static void ReceiveMessagesUDP()
@@ -426,7 +485,6 @@ namespace csharserver
         {
             int size = Marshal.SizeOf(str);
             byte[] arr = new byte[size];
-
             IntPtr ptr = Marshal.AllocHGlobal(size);
             Marshal.StructureToPtr(str, ptr, true);
             Marshal.Copy(ptr, arr, 0, size);
